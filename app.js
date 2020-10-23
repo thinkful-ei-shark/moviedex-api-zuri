@@ -1,10 +1,27 @@
+require('dotenv').config()
 const express = require('express')
 const morgan = require('morgan')
-let movieList = require('./movieList.js')
+const cors = require('cors')
+const helmet = require('helmet')
+let movieList = require('./movieList.json')
 
 const app = express()
 
 app.use(morgan('dev'))
+app.use(cors())
+app.use(helmet())
+app.use(function validateBearerToken(req, res, next) {
+    const bearerToken = req.get('Authorization')
+    const apiToken = process.env.API_TOKEN
+
+    console.log('validate bearer token middleware')
+
+    if (!bearerToken || bearerToken.split(' ')[1] !== apiToken) {
+        return res.status(401).json({ error: 'Unauthorized request' })
+    }
+    next()
+})
+
 
 app.get('/movie', (req, res) => {
     const movieGenre = req.query.genre
@@ -12,11 +29,6 @@ app.get('/movie', (req, res) => {
     const movieAvgVote = req.query.avg_vote
     let response = movieList
 
-    if (movieCountry) {
-        response = response.filter(movie =>
-            movie.country.toLowerCase().includes(movieCountry.toLowerCase())
-        )
-    }
     // Genre query
     if (movieGenre) {
         response = response.filter(movie =>
@@ -25,6 +37,11 @@ app.get('/movie', (req, res) => {
     }
 
     // Country query
+    if (movieCountry) {
+        response = response.filter(movie =>
+            movie.country.toLowerCase().includes(movieCountry.toLowerCase())
+        )
+    }
 
     // Average vote query (number)
     if (movieAvgVote) {
@@ -39,7 +56,3 @@ app.get('/movie', (req, res) => {
 const PORT = 8000
 app.listen(PORT, () => console.log(`Moviedex is working on ${PORT}`))
 
-
-// 1. get query working
-// 2. authorization
-// 3.cors
